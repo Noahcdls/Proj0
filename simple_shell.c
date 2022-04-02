@@ -44,6 +44,7 @@ int main() {
     int argument_count = 0;
 
     char* token = strtok(line, " ");
+    printf(token);
     while(token) {
       if(!command) command = token;
       arguments[argument_count] = token;

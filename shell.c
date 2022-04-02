@@ -78,11 +78,12 @@ void fchild(char **args,int inPipe, int outPipe)
   if (pid == 0)/*Child  process*/
   {
     int execReturn=-1;
-
+    
     /*Call dup2 to setup redirection, and then call excevep*/
-
+    dup2(inPipe, 0);
+    dup2(outPipe, 1);
     /*Your solution*/
-
+    execReturn = execvpe(args[0],(args+1))
     if (execReturn < 0) 
     { 
       printf("ERROR: exec failed\n");
@@ -127,6 +128,9 @@ void runcmd(char * linePtr, int length, int inPipe, int outPipe)
   {
     /*Exit if seeing "exit" command*/
     /*Your solution*/
+    close(inPipe);
+    close(outPipe);
+    exit(0);
             
     if (*nextChar == '<' && inPipe == 0) 
     {
@@ -137,14 +141,18 @@ void runcmd(char * linePtr, int length, int inPipe, int outPipe)
       //thus points to a file name
       nextChar = parse(nextChar+1,in); 
 
-      /* Change inPipe so it follows the redirection */ 
+      /* Change inPipe so it follows the redirection */
       /*Your solutuon*/
+      inPipe = open(*in, O_RDONLY);
 
     }
 
     if (*nextChar == '>')
     {   /*It is output redirection, setup the file name to write*/
         /*Your solutuon*/
+        char * out[length];
+        nextChar = parse(nextChar+1,out);
+        outPipe = open(*out, O_WRONLY);
           
     }
 
@@ -152,9 +160,17 @@ void runcmd(char * linePtr, int length, int inPipe, int outPipe)
     { /*It is a pipe, setup the input and output descriptors */
       /*execute the subcommand that has been parsed, but setup the output using this pipe*/
       /*Your solution*/
+      fchild(args,inPipe,outPipe);
+      
+      wait(0)
+      
       /*execute the remaining subcommands, but setup the input using this pipe*/
       /*Your solution*/
 
+      fchild(args,inPipe,outPipe);
+      
+      
+      
       return;
     }
 
@@ -197,7 +213,7 @@ int main(int argc, char *argv[])
   
     /*Wait for the child completes */
     /*Your solution*/
-
+    wait(0)
   }
 
   return 0;
