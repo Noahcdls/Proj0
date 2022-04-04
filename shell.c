@@ -73,7 +73,6 @@ char* parse(char * lineptr, char **args)
 void fchild(char **args,int inPipe, int outPipe)
 {
   pid_t pid;
-  
   pid = fork();
   if (pid == 0)/*Child  process*/
   {
@@ -83,9 +82,10 @@ void fchild(char **args,int inPipe, int outPipe)
     dup2(inPipe, 0);
     dup2(outPipe, 1);
     /*Your solution*/
-    execReturn = execvpe(args[0],(args+1))
+    execReturn = execvp(args[0],(args));
     if (execReturn < 0) 
     { 
+      //printf(args[0]);
       printf("ERROR: exec failed\n");
       exit(1);
     }
@@ -123,14 +123,17 @@ void runcmd(char * linePtr, int length, int inPipe, int outPipe)
 {
   char * args[length];
   char * nextChar = parse(linePtr, args);
-
   if (args[0] != NULL)
   {
     /*Exit if seeing "exit" command*/
     /*Your solution*/
+    char * exiting = "exit";
+    if(strcmp(args[0], exiting) == 0){
     close(inPipe);
     close(outPipe);
     exit(0);
+    return;
+    }
             
     if (*nextChar == '<' && inPipe == 0) 
     {
@@ -152,7 +155,7 @@ void runcmd(char * linePtr, int length, int inPipe, int outPipe)
         /*Your solutuon*/
         char * out[length];
         nextChar = parse(nextChar+1,out);
-        outPipe = open(*out, O_WRONLY);
+        outPipe = open(out[0], O_CREAT | O_TRUNC | O_WRONLY, S_IRWXU | S_IRWXG);
           
     }
 
@@ -160,15 +163,19 @@ void runcmd(char * linePtr, int length, int inPipe, int outPipe)
     { /*It is a pipe, setup the input and output descriptors */
       /*execute the subcommand that has been parsed, but setup the output using this pipe*/
       /*Your solution*/
-      fchild(args,inPipe,outPipe);
-      
-      wait(0)
-      
+      //dup2(inPipe, 0);
+      int tmpPipe[2];
+      pipe(tmpPipe);
+      int tmpIn = tmpPipe[0];
+      int tmpOut = tmpPipe[1];
+      //int newOut = open("tempor", O_TMPFILE | O_RDWR, S_IRWXU | S_IRWXG);
+      fchild(args,inPipe,tmpOut);   
+      wait(0);
       /*execute the remaining subcommands, but setup the input using this pipe*/
       /*Your solution*/
-
-      fchild(args,inPipe,outPipe);
-      
+      //int newPipe = outPipe;
+      //fchild(args,inPipe,0);
+      runcmd(nextChar+1, length, tmpIn, outPipe);
       
       
       return;
@@ -182,6 +189,7 @@ void runcmd(char * linePtr, int length, int inPipe, int outPipe)
 
     //else: some problem, so throw a fit.
     printf("ERROR: Invalid input: %c\n",*nextChar);
+    return;
   }
 }
 
@@ -190,30 +198,33 @@ int main(int argc, char *argv[])
 {
   /*Your solution*/
   char lineIn[1024];
-
-  while(1) 
+  while(1==1) 
   {
-    if (fgets(lineIn,1024,stdin) == NULL)
+    fflush(stdin);
+    fflush(stdout);
+    if(fgets(lineIn,1024,stdin) == NULL){
       break;
-              
+      } 
+    
     int len = 0;
-    while (lineIn[len] != '\0')
+    while (lineIn[len] != '\0'){
       len++;
-      
+      }
+ 
     /* remove the \n that fgets adds to the end */
-    if (len != 0 && lineIn[len-1] == '\n')
+    if(len != 0 && lineIn[len-1] == '\n')
     {
       lineIn[len-1] = '\0';
       len--;
     }
-        
+
     //Run this string of subcommands with 0 as default input stream
     //and 1 as default output stream
     runcmd(lineIn, len,0,1);
   
     /*Wait for the child completes */
     /*Your solution*/
-    wait(0)
+    wait(0);
   }
 
   return 0;
